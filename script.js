@@ -24,16 +24,6 @@ const paramsPrefix = 'Steps: ';
 let currentFile = null;
 let currentMetadata = null;
 
-function init() {
-    setupTabSwitching();
-    setupDragAndDrop();
-    setupEditDragAndDrop();
-    setupLoraDragAndDrop();
-    setupCopyButtons();
-    setupFileInputs();
-    setupSaveHandler();
-}
-
 function setupTabSwitching() {
     document.querySelectorAll('.tab').forEach(tab => {
         tab.addEventListener('click', function() {
