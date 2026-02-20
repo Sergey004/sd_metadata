@@ -1,4 +1,5 @@
 const dropArea = document.getElementById('drop-area');
+const dropArea = document.getElementById('drop-area');
 const preview = document.getElementById('preview');
 const promptPre = document.getElementById('prompt');
 const negativePromptPre = document.getElementById('negative-prompt');
