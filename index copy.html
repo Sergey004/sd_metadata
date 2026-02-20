@@ -1,0 +1,395 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metadata Editor</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="logo">
+                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="8" fill="#34d399"/>
+                    <path d="M8 12h16M8 16h12M8 20h8" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <nav class="tabs">
+                <button class="tab active" data-tab="view">
+                    <i class="fas fa-eye"></i>
+                    <span>View</span>
+                </button>
+                <button class="tab" data-tab="edit">
+                    <i class="fas fa-edit"></i>
+                    <span>Edit</span>
+                </button>
+                <button class="tab" data-tab="lora">
+                    <i class="fas fa-layer-group"></i>
+                    <span>LoRA</span>
+                </button>
+                <button class="tab" data-tab="civitai">
+                    <i class="fas fa-cloud-download-alt"></i>
+                    <span>Civitai</span>
+                </button>
+            </nav>
+            <div class="social-links">
+                <a href="https://civitai.com/user/Sergey004" target="_blank" title="CivitAI">
+                    <i class="fas fa-cube"></i>
+                </a>
+            </div>
+        </aside>
+
+        <main class="main">
+            <!-- VIEW TAB -->
+            <section class="tab-content active" id="view-tab">
+                <header class="header">
+                    <h1>Metadata Viewer</h1>
+                    <p class="subtitle">Drop an image to view its metadata</p>
+                </header>
+
+                <div class="drop-zone" id="drop-area">
+                    <div class="drop-content">
+                        <div class="drop-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </div>
+                        <p class="drop-text">Drag & drop image here</p>
+                        <p class="drop-hint">PNG, JPG, JPEG • or click to browse</p>
+                    </div>
+                    <input type="file" class="file-input" accept="image/*" hidden>
+                </div>
+
+                <div class="notification" id="notification"></div>
+
+                <div class="results hidden" id="results">
+                    <div class="preview-card">
+                        <img id="preview" alt="Preview">
+                    </div>
+
+                    <div class="metadata-grid">
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Prompt</h3>
+                                <button class="btn-copy" data-target="prompt">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                            <div class="meta-content">
+                                <pre id="prompt"></pre>
+                            </div>
+                        </div>
+
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Negative Prompt</h3>
+                                <button class="btn-copy" data-target="negative-prompt">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                            <div class="meta-content">
+                                <pre id="negative-prompt"></pre>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <div class="meta-header">
+                                <h3>Parameters</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div class="params-grid" id="parameters-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EDIT TAB -->
+            <section class="tab-content" id="edit-tab">
+                <header class="header">
+                    <h1>Metadata Editor</h1>
+                    <p class="subtitle">Edit and save image metadata</p>
+                </header>
+
+                <div class="drop-zone" id="edit-drop-area">
+                    <div class="drop-content">
+                        <div class="drop-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </div>
+                        <p class="drop-text">Drag & drop image to edit</p>
+                        <p class="drop-hint">PNG, JPG, JPEG • or click to browse</p>
+                    </div>
+                    <input type="file" class="file-input" accept="image/*" hidden>
+                </div>
+
+                <div class="notification" id="edit-notification"></div>
+
+                <div class="edit-form hidden" id="edit-form">
+                    <div class="preview-card">
+                        <img id="edit-preview" alt="Preview">
+                    </div>
+
+                    <div class="metadata-grid">
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Prompt</h3>
+                            </div>
+                            <div class="meta-content">
+                                <textarea id="edit-prompt" class="meta-input" rows="4"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Negative Prompt</h3>
+                            </div>
+                            <div class="meta-content">
+                                <textarea id="edit-negative-prompt" class="meta-input" rows="4"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <div class="meta-header">
+                                <h3>Parameters</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div id="edit-parameters"></div>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <button id="save-changes" class="btn-save">
+                                <i class="fas fa-download"></i>
+                                <span>Save & Download Image</span>
+                            </button>
+                            <p class="save-note">In Development</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LORA TAB -->
+            <section class="tab-content" id="lora-tab">
+                <header class="header">
+                    <h1>LoRA Metadata</h1>
+                    <p class="subtitle">Drop a safetensors file to view its metadata</p>
+                </header>
+
+                <div class="drop-zone" id="lora-drop-area">
+                    <div class="drop-content">
+                        <div class="drop-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </div>
+                        <p class="drop-text">Drag & drop safetensors file here</p>
+                        <p class="drop-hint">.safetensors • or click to browse</p>
+                    </div>
+                    <input type="file" class="file-input" accept=".safetensors" hidden>
+                </div>
+
+                <div class="notification" id="lora-notification"></div>
+
+                <div class="results hidden" id="lora-results">
+                    <div class="metadata-grid" id="lora-grid">
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Model</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div class="param-row">
+                                    <span class="param-name">Name:</span>
+                                    <span class="param-value" id="model-name">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Base Model:</span>
+                                    <span class="param-value" id="base-model">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">VAE:</span>
+                                    <span class="param-value" id="model-vae">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>General</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div class="param-row">
+                                    <span class="param-name">Batch:</span>
+                                    <span class="param-value" id="batch-size">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Resolution:</span>
+                                    <span class="param-value" id="resolution">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Clip Skip:</span>
+                                    <span class="param-value" id="clip-skip">1</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Epoch:</span>
+                                    <span class="param-value" id="epoch">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Steps:</span>
+                                    <span class="param-value" id="steps">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Optimizer</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div class="param-row">
+                                    <span class="param-name">Type:</span>
+                                    <span class="param-value" id="optimizer-type">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Scheduler:</span>
+                                    <span class="param-value" id="scheduler">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Learning Rates:</span>
+                                    <span class="param-value" id="learning-rates">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Optional Args:</span>
+                                    <span class="param-value" id="optional-args">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="meta-card">
+                            <div class="meta-header">
+                                <h3>Training Info</h3>
+                            </div>
+                            <div class="meta-content">
+                                <div class="param-row">
+                                    <span class="param-name">Train Date:</span>
+                                    <span class="param-value" id="train-date">—</span>
+                                </div>
+                                <div class="param-row">
+                                    <span class="param-name">Train Time:</span>
+                                    <span class="param-value" id="train-time">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <div class="meta-header">
+                                <h3>Dataset</h3>
+                            </div>
+                            <div class="meta-content">
+                                <pre id="dataset-info">—</pre>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <div class="meta-header">
+                                <h3>Suggested Prompt</h3>
+                                <button class="btn-copy" data-target="suggested-prompt">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                            <div class="meta-content">
+                                <pre id="suggested-prompt">—</pre>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width">
+                            <div class="meta-header">
+                                <h3>Tag Frequency</h3>
+                                <button class="btn-copy" data-target="tag-frequency">
+                                    <i class="fas fa-copy"></i>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                            <div class="meta-content">
+                                <pre id="tag-frequency">—</pre>
+                            </div>
+                        </div>
+
+                        <div class="meta-card full-width" id="civitai-info-card" style="display: none;">
+                            <div class="meta-header">
+                                <h3>Civitai Info</h3>
+                                <button class="btn-copy" id="civitai-search-btn">
+                                    <i class="fas fa-search"></i>
+                                    <span>Search on Civitai</span>
+                                </button>
+                            </div>
+                            <div class="meta-content">
+                                <div id="civitai-lora-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CIVITAI TAB -->
+            <section class="tab-content" id="civitai-tab">
+                <header class="header">
+                    <h1>Civitai Lookup</h1>
+                    <p class="subtitle">Search for models on Civitai by hash or name</p>
+                </header>
+
+                <div class="search-box">
+                    <div class="search-tabs">
+                        <button class="search-tab active" data-search="hash">By Hash</button>
+                        <button class="search-tab" data-search="name">By Name</button>
+                    </div>
+
+                    <div class="search-input-wrapper" id="hash-search">
+                        <input type="text" id="civitai-hash-input" class="search-input" placeholder="Enter SHA256 hash (full or partial)">
+                        <button id="civitai-hash-btn" class="btn-search">
+                            <i class="fas fa-search"></i>
+                            <span>Search</span>
+                        </button>
+                    </div>
+
+                    <div class="search-input-wrapper hidden" id="name-search">
+                        <input type="text" id="civitai-name-input" class="search-input" placeholder="Enter model name">
+                        <select id="civitai-type-select" class="search-select">
+                            <option value="">All Types</option>
+                            <option value="LORA">LORA</option>
+                            <option value="LoCon">LoCon</option>
+                            <option value="Checkpoint">Checkpoint</option>
+                            <option value="TextualInversion">Textual Inversion</option>
+                            <option value="VAE">VAE</option>
+                            <option value="Upscaler">Upscaler</option>
+                        </select>
+                        <button id="civitai-name-btn" class="btn-search">
+                            <i class="fas fa-search"></i>
+                            <span>Search</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="notification" id="civitai-notification"></div>
+
+                <div class="civitai-results hidden" id="civitai-results"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.js"></script>
+    <script src="civitai/civitai.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
