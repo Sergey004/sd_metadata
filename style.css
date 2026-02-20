@@ -546,3 +546,178 @@ body {
         min-width: auto;
     }
 }
+
+/* Search Box */
+.search-box {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+}
+
+.search-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.search-tab {
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.search-tab:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.search-tab.active {
+    background-color: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.search-input-wrapper {
+    display: flex;
+    gap: 12px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 12px 16px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: var(--transition);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+.search-select {
+    padding: 12px 16px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.search-select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.btn-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--bg-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.btn-search:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn-search:disabled {
+    background-color: var(--border-color);
+    cursor: not-allowed;
+}
+
+.btn-search i {
+    font-size: 14px;
+}
+
+/* Civitai Results */
+.civitai-results {
+    animation: fadeIn 0.4s ease;
+}
+
+.civitai-results .meta-card {
+    margin-bottom: 20px;
+}
+
+.civitai-results .meta-card:last-child {
+    margin-bottom: 0;
+}
+
+.civitai-results .meta-content img {
+    max-width: 100%;
+    border-radius: var(--radius-sm);
+}
+
+.civitai-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.civitai-loading i {
+    font-size: 18px;
+    color: var(--accent);
+}
+
+#civitai-search-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#civitai-search-btn:hover {
+    background-color: var(--accent-muted);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+#civitai-search-btn i {
+    font-size: 11px;
+}
+
+#civitai-info-card .meta-content {
+    min-height: 100px;
+}
+
+#civitai-lora-results .meta-card {
+    margin-bottom: 16px;
+}
+
+#civitai-lora-results .meta-card:last-child {
+    margin-bottom: 0;
+}
+

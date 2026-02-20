@@ -222,9 +222,40 @@ async function handleLoraFile(file) {
         displayLoraMetadata(normalizedMetadata);
         loraResults.classList.remove('hidden');
         showLoraNotification('File loaded successfully', 'success');
+
+        const sha256 = await calculateFileSha256(file);
+        if (sha256) {
+            const civitaiInfoCard = document.getElementById('civitai-info-card');
+            const civitaiLoraResults = document.getElementById('civitai-lora-results');
+            civitaiLoraResults.innerHTML = '<div class="civitai-loading"><i class="fas fa-spinner fa-spin"></i> Searching Civitai...</div>';
+            civitaiInfoCard.style.display = 'block';
+
+            try {
+                const civitaiMetadata = await CivitaiClient.loadCivitaiInfoByHash(sha256, civitaiLoraResults);
+                if (civitaiMetadata) {
+                    showLoraNotification('Civitai info found!', 'success');
+                }
+            } catch (e) {
+                console.warn('Civitai lookup failed:', e);
+                civitaiLoraResults.innerHTML = '<p style="color: var(--text-muted);">No match found on Civitai</p>';
+            }
+        }
     } catch (error) {
         console.error('Error processing file:', error);
         showLoraNotification('Error processing file: ' + error.message, 'error');
+    }
+}
+
+async function calculateFileSha256(file) {
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        return hashHex.toLowerCase();
+    } catch (error) {
+        console.error('Error calculating SHA256:', error);
+        return null;
     }
 }
 
@@ -688,4 +719,123 @@ function showLoraNotification(message, type) {
     }, 3000);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+const civitaiTab = document.getElementById('civitai-tab');
+const civitaiNotification = document.getElementById('civitai-notification');
+const civitaiResults = document.getElementById('civitai-results');
+const civitaiHashInput = document.getElementById('civitai-hash-input');
+const civitaiHashBtn = document.getElementById('civitai-hash-btn');
+const civitaiNameInput = document.getElementById('civitai-name-input');
+const civitaiTypeSelect = document.getElementById('civitai-type-select');
+const civitaiNameBtn = document.getElementById('civitai-name-btn');
+const hashSearchWrapper = document.getElementById('hash-search');
+const nameSearchWrapper = document.getElementById('name-search');
+
+function setupCivitaiSearch() {
+    document.querySelectorAll('.search-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            const searchType = this.getAttribute('data-search');
+            if (searchType === 'hash') {
+                hashSearchWrapper.classList.remove('hidden');
+                nameSearchWrapper.classList.add('hidden');
+            } else {
+                hashSearchWrapper.classList.add('hidden');
+                nameSearchWrapper.classList.remove('hidden');
+            }
+        });
+    });
+
+    civitaiHashBtn.addEventListener('click', handleCivitaiHashSearch);
+    civitaiNameBtn.addEventListener('click', handleCivitaiNameSearch);
+
+    civitaiHashInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleCivitaiHashSearch();
+    });
+
+    civitaiNameInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleCivitaiNameSearch();
+    });
+}
+
+async function handleCivitaiHashSearch() {
+    const hash = civitaiHashInput.value.trim();
+    if (!hash) {
+        showCivitaiNotification('Please enter a hash', 'error');
+        return;
+    }
+
+    civitaiHashBtn.disabled = true;
+    civitaiHashBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Searching...</span>';
+
+    try {
+        const metadata = await CivitaiClient.loadCivitaiInfoByHash(hash, civitaiResults);
+        if (metadata) {
+            civitaiResults.classList.remove('hidden');
+            showCivitaiNotification('Model found!', 'success');
+        } else {
+            showCivitaiNotification('No model found for this hash', 'error');
+            civitaiResults.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Civitai search error:', error);
+        showCivitaiNotification('Error searching Civitai: ' + error.message, 'error');
+        civitaiResults.classList.add('hidden');
+    }
+
+    civitaiHashBtn.disabled = false;
+    civitaiHashBtn.innerHTML = '<i class="fas fa-search"></i><span>Search</span>';
+}
+
+async function handleCivitaiNameSearch() {
+    const name = civitaiNameInput.value.trim();
+    if (!name) {
+        showCivitaiNotification('Please enter a model name', 'error');
+        return;
+    }
+
+    const type = civitaiTypeSelect.value;
+
+    civitaiNameBtn.disabled = true;
+    civitaiNameBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Searching...</span>';
+
+    try {
+        const metadata = await CivitaiClient.loadCivitaiInfoByName(name, civitaiResults, type || null);
+        if (metadata) {
+            civitaiResults.classList.remove('hidden');
+            showCivitaiNotification('Model found!', 'success');
+        } else {
+            showCivitaiNotification('No models found', 'error');
+            civitaiResults.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Civitai search error:', error);
+        showCivitaiNotification('Error searching Civitai: ' + error.message, 'error');
+        civitaiResults.classList.add('hidden');
+    }
+
+    civitaiNameBtn.disabled = false;
+    civitaiNameBtn.innerHTML = '<i class="fas fa-search"></i><span>Search</span>';
+}
+
+function showCivitaiNotification(message, type) {
+    civitaiNotification.textContent = message;
+    civitaiNotification.className = 'notification ' + (type || '');
+    civitaiNotification.classList.add('show');
+
+    setTimeout(() => {
+        civitaiNotification.classList.remove('show');
+    }, 3000);
+}
+
+function init() {
+    setupTabSwitching();
+    setupDragAndDrop();
+    setupEditDragAndDrop();
+    setupLoraDragAndDrop();
+    setupCivitaiSearch();
+    setupCopyButtons();
+    setupFileInputs();
+    setupSaveHandler();
+}
