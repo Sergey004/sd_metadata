@@ -829,3 +829,5 @@ function init() {
     setupFileInputs();
     setupSaveHandler();
 }
+
+document.addEventListener('DOMContentLoaded', init);
