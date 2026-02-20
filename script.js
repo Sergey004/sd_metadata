@@ -314,7 +314,22 @@ function extractPNGMetadata(file) {
 
                         if (key === 'parameters') {
                             metadata.parameters = parseParameters(value);
-                        } else if (key === 'prompt' || key === 'workflow') {
+                        } else if (key === 'prompt') {
+                            try {
+                                const promptObj = JSON.parse(value);
+                                const extracted = extractPromptFromComfyUI(promptObj);
+                                if (extracted) {
+                                    if (extracted.prompt) {
+                                        metadata.prompt = extracted.prompt;
+                                    }
+                                    if (extracted.negativePrompt) {
+                                        metadata.negativePrompt = extracted.negativePrompt;
+                                    }
+                                }
+                            } catch (e) {
+                                metadata.prompt = value;
+                            }
+                        } else if (key === 'workflow') {
                             metadata[key] = value;
                         }
                     }
@@ -404,6 +419,71 @@ function parseParameters(parameters) {
     return result;
 }
 
+function extractPromptFromComfyUI(promptObj) {
+    if (!promptObj || typeof promptObj !== 'object') {
+        return null;
+    }
+
+    let promptText = '';
+    let negativePromptText = '';
+    let promptNodeId = null;
+    let negativePromptNodeId = null;
+
+    for (const [nodeId, node] of Object.entries(promptObj)) {
+        if (!node || typeof node !== 'object') continue;
+
+        const classType = node.class_type;
+        if (classType !== 'CLIPTextEncode' && classType !== 'CLIPTextEncodeSDXL') continue;
+
+        const inputs = node.inputs || {};
+        const textValue = inputs.text;
+
+        if (!textValue || typeof textValue !== 'string') continue;
+
+        const lowerId = nodeId.toLowerCase();
+
+        if (inputs.conditioning !== undefined || lowerId.includes('neg') || lowerId.includes('negative')) {
+            if (!negativePromptNodeId) {
+                negativePromptText = textValue;
+                negativePromptNodeId = nodeId;
+            }
+        } else if (!promptNodeId) {
+            promptText = textValue;
+            promptNodeId = nodeId;
+        }
+    }
+
+    if (!promptText && !negativePromptText) {
+        promptText = tryResolveInputs(promptObj, promptNodeId);
+        negativePromptText = tryResolveInputs(promptObj, negativePromptNodeId);
+    }
+
+    return {
+        prompt: promptText || null,
+        negativePrompt: negativePromptText || null
+    };
+}
+
+function tryResolveInputs(promptObj, nodeId) {
+    if (!nodeId || !promptObj[nodeId]) return null;
+
+    const node = promptObj[nodeId];
+    const inputs = node.inputs || {};
+
+    if (inputs.text && typeof inputs.text === 'string') {
+        return inputs.text;
+    }
+
+    if (Array.isArray(inputs.text)) {
+        const lastItem = inputs.text[inputs.text.length - 1];
+        if (typeof lastItem === 'string') {
+            return lastItem;
+        }
+    }
+
+    return null;
+}
+
 function displayMetadata(metadata) {
     resultsDiv.classList.remove('hidden');
     promptPre.textContent = '';
@@ -424,6 +504,10 @@ function displayMetadata(metadata) {
 
     if (metadata.prompt) {
         promptPre.textContent = metadata.prompt;
+    }
+
+    if (metadata.negativePrompt) {
+        negativePromptPre.textContent = metadata.negativePrompt;
     }
 }
 
