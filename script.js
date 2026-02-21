@@ -1,29 +1,50 @@
-const dropArea = document.getElementById('drop-area');
-const dropArea = document.getElementById('drop-area');
-const preview = document.getElementById('preview');
-const promptPre = document.getElementById('prompt');
-const negativePromptPre = document.getElementById('negative-prompt');
-const parametersTable = document.getElementById('parameters-table');
-const notification = document.getElementById('notification');
-const resultsDiv = document.getElementById('results');
-const editDropArea = document.getElementById('edit-drop-area');
-const editPreview = document.getElementById('edit-preview');
-const editPrompt = document.getElementById('edit-prompt');
-const editNegativePrompt = document.getElementById('edit-negative-prompt');
-const editParameters = document.getElementById('edit-parameters');
-const saveButton = document.getElementById('save-changes');
-const editNotification = document.getElementById('edit-notification');
-const editForm = document.getElementById('edit-form');
-
-const loraDropArea = document.getElementById('lora-drop-area');
-const loraNotification = document.getElementById('lora-notification');
-const loraResults = document.getElementById('lora-results');
+let dropArea, preview, promptPre, negativePromptPre, parametersTable, notification, resultsDiv;
+let editDropArea, editPreview, editPrompt, editNegativePrompt, editParameters, saveButton, editNotification, editForm;
+let loraDropArea, loraNotification, loraResults;
+let civitaiNotification, civitaiResults, civitaiHashInput, civitaiHashBtn, civitaiNameInput, civitaiTypeSelect, civitaiNameBtn;
 
 const negativePrefix = 'Negative prompt: ';
 const paramsPrefix = 'Steps: ';
 
 let currentFile = null;
 let currentMetadata = null;
+
+function init() {
+    dropArea = document.getElementById('drop-area');
+    preview = document.getElementById('preview');
+    promptPre = document.getElementById('prompt');
+    negativePromptPre = document.getElementById('negative-prompt');
+    parametersTable = document.getElementById('parameters-table');
+    notification = document.getElementById('notification');
+    resultsDiv = document.getElementById('results');
+    editDropArea = document.getElementById('edit-drop-area');
+    editPreview = document.getElementById('edit-preview');
+    editPrompt = document.getElementById('edit-prompt');
+    editNegativePrompt = document.getElementById('edit-negative-prompt');
+    editParameters = document.getElementById('edit-parameters');
+    saveButton = document.getElementById('save-changes');
+    editNotification = document.getElementById('edit-notification');
+    editForm = document.getElementById('edit-form');
+    loraDropArea = document.getElementById('lora-drop-area');
+    loraNotification = document.getElementById('lora-notification');
+    loraResults = document.getElementById('lora-results');
+    civitaiNotification = document.getElementById('civitai-notification');
+    civitaiResults = document.getElementById('civitai-results');
+    civitaiHashInput = document.getElementById('civitai-hash-input');
+    civitaiHashBtn = document.getElementById('civitai-hash-btn');
+    civitaiNameInput = document.getElementById('civitai-name-input');
+    civitaiTypeSelect = document.getElementById('civitai-type-select');
+    civitaiNameBtn = document.getElementById('civitai-name-btn');
+
+    setupTabSwitching();
+    setupDragAndDrop();
+    setupEditDragAndDrop();
+    setupLoraDragAndDrop();
+    setupCivitaiSearch();
+    setupCopyButtons();
+    setupFileInputs();
+    setupSaveHandler();
+}
 
 function setupTabSwitching() {
     document.querySelectorAll('.tab').forEach(tab => {
@@ -124,19 +145,22 @@ function setupFileInputs() {
 }
 
 function setupCopyButtons() {
-    document.querySelectorAll('.btn-copy').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const targetId = e.currentTarget.getAttribute('data-target');
-            const textToCopy = document.getElementById(targetId).textContent;
-            copyToClipboard(textToCopy);
-            const button = e.currentTarget;
-            button.classList.add('copied');
-            button.querySelector('span').textContent = 'Copied!';
-            setTimeout(() => {
-                button.classList.remove('copied');
-                button.querySelector('span').textContent = 'Copy';
-            }, 2000);
-        });
+    document.addEventListener('click', (e) => {
+        const button = e.target.closest('.btn-copy');
+        if (!button) return;
+
+        const targetId = button.getAttribute('data-target');
+        const targetElement = document.getElementById(targetId);
+        if (!targetElement) return;
+
+        const textToCopy = targetElement.textContent;
+        copyToClipboard(textToCopy);
+        button.classList.add('copied');
+        button.querySelector('span').textContent = 'Copied!';
+        setTimeout(() => {
+            button.classList.remove('copied');
+            button.querySelector('span').textContent = 'Copy';
+        }, 2000);
     });
 }
 
@@ -794,18 +818,12 @@ function showLoraNotification(message, type) {
     }, 3000);
 }
 
-const civitaiTab = document.getElementById('civitai-tab');
-const civitaiNotification = document.getElementById('civitai-notification');
-const civitaiResults = document.getElementById('civitai-results');
-const civitaiHashInput = document.getElementById('civitai-hash-input');
-const civitaiHashBtn = document.getElementById('civitai-hash-btn');
-const civitaiNameInput = document.getElementById('civitai-name-input');
-const civitaiTypeSelect = document.getElementById('civitai-type-select');
-const civitaiNameBtn = document.getElementById('civitai-name-btn');
-const hashSearchWrapper = document.getElementById('hash-search');
-const nameSearchWrapper = document.getElementById('name-search');
+let civitaiTab, hashSearchWrapper, nameSearchWrapper;
 
 function setupCivitaiSearch() {
+    civitaiTab = document.getElementById('civitai-tab');
+    hashSearchWrapper = document.getElementById('hash-search');
+    nameSearchWrapper = document.getElementById('name-search');
     document.querySelectorAll('.search-tab').forEach(tab => {
         tab.addEventListener('click', function() {
             document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
@@ -904,15 +922,107 @@ function showCivitaiNotification(message, type) {
     }, 3000);
 }
 
-function init() {
-    setupTabSwitching();
-    setupDragAndDrop();
-    setupEditDragAndDrop();
-    setupLoraDragAndDrop();
-    setupCivitaiSearch();
-    setupCopyButtons();
-    setupFileInputs();
-    setupSaveHandler();
+function detectActualImageType(arrayBuffer) {
+    const dataView = new DataView(arrayBuffer);
+    const bytes = new Uint8Array(arrayBuffer);
+
+    if (bytes.length >= 8 &&
+        dataView.getUint8(0) === 0x89 &&
+        dataView.getUint8(1) === 0x50 &&
+        dataView.getUint8(2) === 0x4E &&
+        dataView.getUint8(3) === 0x47 &&
+        dataView.getUint8(4) === 0x0D &&
+        dataView.getUint8(5) === 0x0A &&
+        dataView.getUint8(6) === 0x1A &&
+        dataView.getUint8(7) === 0x0A) {
+        return 'png';
+    }
+
+    if (bytes.length >= 2 &&
+        dataView.getUint8(0) === 0xFF &&
+        dataView.getUint8(1) === 0xD8) {
+        return 'jpeg';
+    }
+
+    return 'unknown';
+}
+
+function tryParseJson(str) {
+    try {
+        const parsed = JSON.parse(str);
+        if (parsed && typeof parsed === 'object') return parsed;
+    } catch {}
+    return null;
+}
+
+function tryParseBase64(str) {
+    if (!str || str.length < 100) return null;
+
+    if (/^[A-Za-z0-9+/]+=*$/.test(str)) {
+        try {
+            const decoded = atob(str);
+            const parsed = tryParseJson(decoded);
+            if (parsed) return parsed;
+        } catch {}
+    }
+    return null;
+}
+
+function isBase64(str) {
+    return str && str.length > 100 && /^[A-Za-z0-9+/]+=*$/.test(str);
+}
+
+function decodeBase64(str) {
+    try {
+        return atob(str);
+    } catch {
+        return null;
+    }
+}
+
+function extractLoraHashesFromMetadata(metadata) {
+    const loraHashes = {};
+
+    if (metadata.parameters) {
+        const paramsText = Array.isArray(metadata.parameters)
+            ? metadata.parameters.join('\n')
+            : metadata.parameters;
+
+        const hashesMatch = paramsText.match(/Hashes:\s*({[^}]+})/);
+        if (hashesMatch) {
+            try {
+                const hashesJson = JSON.parse(hashesMatch[1]);
+                for (const [key, hash] of Object.entries(hashesJson)) {
+                    if (key.startsWith('lora:')) {
+                        const loraName = key.replace('lora:', '');
+                        loraHashes[loraName] = hash;
+                    }
+                }
+            } catch (e) {
+                console.warn('Error parsing hashes JSON:', e);
+            }
+        }
+    }
+
+    return loraHashes;
+}
+
+function extractLoraNamesFromPrompt(text, loraHashes = {}) {
+    const loraRegex = /<lora:([\w\-\\\/\.]+):([\d\.]+)>/gi;
+    const found = [];
+    let match;
+
+    while ((match = loraRegex.exec(text)) !== null) {
+        const fullName = match[1];
+        const name = fullName.split(/[\\/]/).pop();
+        const strength = match[2];
+
+        let hash = loraHashes[fullName] || loraHashes[name] || null;
+
+        found.push({ name, strength, hash });
+    }
+
+    return found;
 }
 
 document.addEventListener('DOMContentLoaded', init);

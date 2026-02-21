@@ -216,6 +216,22 @@ function formatFileSize(kb) {
     return `${(kb / (1024 * 1024)).toFixed(2)} GB`;
 }
 
+function createCopyButton(text, container) {
+    const btn = document.createElement("button");
+    btn.className = "btn-copy";
+    btn.innerHTML = '<i class="fas fa-copy"></i><span>Copy</span>';
+    btn.addEventListener("click", () => {
+        copyToClipboard(text);
+        btn.classList.add("copied");
+        btn.querySelector("span").textContent = "Copied!";
+        setTimeout(() => {
+            btn.classList.remove("copied");
+            btn.querySelector("span").textContent = "Copy";
+        }, 2000);
+    });
+    return btn;
+}
+
 function displayCivitaiMetadata(metadata, container) {
     if (!metadata || !container) return;
 
@@ -259,51 +275,48 @@ function displayCivitaiMetadata(metadata, container) {
     if (metadata.trainedWords && metadata.trainedWords.length > 0) {
         const trainedCard = document.createElement("div");
         trainedCard.className = "meta-card full-width";
+        const trainedText = metadata.trainedWords.join(", ");
         trainedCard.innerHTML = `
             <div class="meta-header">
                 <h3>Trigger Words</h3>
-                <button class="btn-copy" data-target="civitai-trained-words">
-                    <i class="fas fa-copy"></i><span>Copy</span>
-                </button>
             </div>
             <div class="meta-content">
-                <pre id="civitai-trained-words">${escapeHtml(metadata.trainedWords.join(", "))}</pre>
+                <pre>${escapeHtml(trainedText)}</pre>
             </div>
         `;
+        trainedCard.querySelector(".meta-header").appendChild(createCopyButton(trainedText, trainedCard));
         container.appendChild(trainedCard);
     }
 
     if (metadata.description) {
         const descCard = document.createElement("div");
         descCard.className = "meta-card full-width";
+        const descText = metadata.description;
         descCard.innerHTML = `
             <div class="meta-header">
                 <h3>Description</h3>
-                <button class="btn-copy" data-target="civitai-description">
-                    <i class="fas fa-copy"></i><span>Copy</span>
-                </button>
             </div>
             <div class="meta-content">
-                <pre id="civitai-description">${escapeHtml(metadata.description)}</pre>
+                <pre>${escapeHtml(descText)}</pre>
             </div>
         `;
+        descCard.querySelector(".meta-header").appendChild(createCopyButton(descText, descCard));
         container.appendChild(descCard);
     }
 
     if (metadata.suggestedPrompt) {
         const promptCard = document.createElement("div");
         promptCard.className = "meta-card full-width";
+        const promptText = metadata.suggestedPrompt;
         promptCard.innerHTML = `
             <div class="meta-header">
                 <h3>Suggested Prompt</h3>
-                <button class="btn-copy" data-target="civitai-suggested-prompt">
-                    <i class="fas fa-copy"></i><span>Copy</span>
-                </button>
             </div>
             <div class="meta-content">
-                <pre id="civitai-suggested-prompt">${escapeHtml(metadata.suggestedPrompt)}</pre>
+                <pre>${escapeHtml(promptText)}</pre>
             </div>
         `;
+        promptCard.querySelector(".meta-header").appendChild(createCopyButton(promptText, promptCard));
         container.appendChild(promptCard);
     }
 
@@ -343,27 +356,6 @@ function displayCivitaiMetadata(metadata, container) {
         `;
         container.appendChild(filesCard);
     }
-
-    attachCopyHandlers(container);
-}
-
-function attachCopyHandlers(container) {
-    container.querySelectorAll(".btn-copy").forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const targetId = e.currentTarget.getAttribute("data-target");
-            const textToCopy = document.getElementById(targetId)?.textContent;
-            if (textToCopy) {
-                copyToClipboard(textToCopy);
-                const button = e.currentTarget;
-                button.classList.add("copied");
-                button.querySelector("span").textContent = "Copied!";
-                setTimeout(() => {
-                    button.classList.remove("copied");
-                    button.querySelector("span").textContent = "Copy";
-                }, 2000);
-            }
-        });
-    });
 }
 
 function escapeHtml(text) {
