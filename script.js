@@ -536,18 +536,73 @@ function displayMetadata(metadata) {
     }
 }
 
-function displayParametersTable(parameters) {
+// Умный парсер параметров, который игнорирует запятые внутри JSON-объектов и строк
+function parseComplexParameters(parametersStr) {
     const params = {};
-    const parts = parameters.split(', ');
+    if (!parametersStr) return params;
 
-    parts.forEach(part => {
-        const separatorIndex = part.indexOf(': ');
-        if (separatorIndex > -1) {
-            const key = part.substring(0, separatorIndex);
-            const value = part.substring(separatorIndex + 2);
-            params[key] = value;
+    let currentKey = '';
+    let currentValue = '';
+    let inString = false;
+    let inObject = 0;
+    let inArray = 0;
+    let parsingKey = true;
+
+    for (let i = 0; i < parametersStr.length; i++) {
+        const char = parametersStr[i];
+        const nextChar = parametersStr[i + 1];
+
+        // Отслеживаем нахождение внутри кавычек
+        if (char === '"' && (i === 0 || parametersStr[i - 1] !== '\\')) {
+            inString = !inString;
         }
-    });
+
+        // Отслеживаем вложенность скобок (если мы не в строке)
+        if (!inString) {
+            if (char === '{') inObject++;
+            if (char === '}') inObject--;
+            if (char === '[') inArray++;
+            if (char === ']') inArray--;
+        }
+
+        // Ищем разделитель ключа и значения ": "
+        if (parsingKey && char === ':' && nextChar === ' ' && !inString && inObject === 0 && inArray === 0) {
+            parsingKey = false;
+            i++; // Пропускаем пробел
+            continue;
+        }
+
+        // Ищем разделитель параметров ", "
+        if (!parsingKey && char === ',' && nextChar === ' ' && !inString && inObject === 0 && inArray === 0) {
+            if (currentKey.trim() !== '') {
+                params[currentKey.trim()] = currentValue.trim();
+            }
+            currentKey = '';
+            currentValue = '';
+            parsingKey = true;
+            i++; // Пропускаем пробел
+            continue;
+        }
+
+        // Собираем ключ или значение
+        if (parsingKey) {
+            currentKey += char;
+        } else {
+            currentValue += char;
+        }
+    }
+
+    // Добавляем последний параметр
+    if (currentKey.trim() !== '') {
+        params[currentKey.trim()] = currentValue.trim();
+    }
+
+    return params;
+}
+
+function displayParametersTable(parameters) {
+    // Используем наш новый умный парсер
+    const params = parseComplexParameters(parameters);
 
     parametersTable.innerHTML = '';
 
@@ -605,29 +660,27 @@ function populateEditFields(metadata) {
 }
 
 function createParameterEditors(parameters) {
-    const params = parameters.split(', ');
-    params.forEach(param => {
-        const separatorIndex = param.indexOf(': ');
-        if (separatorIndex > -1) {
-            const key = param.substring(0, separatorIndex);
-            const value = param.substring(separatorIndex + 2);
+    // Используем наш новый умный парсер
+    const paramsObj = parseComplexParameters(parameters);
 
-            const row = document.createElement('div');
-            row.className = 'param-row';
+    Object.keys(paramsObj).forEach(key => {
+        const value = paramsObj[key];
 
-            const nameCell = document.createElement('div');
-            nameCell.className = 'param-name';
-            nameCell.textContent = key + ':';
+        const row = document.createElement('div');
+        row.className = 'param-row';
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = value;
-            input.dataset.key = key;
+        const nameCell = document.createElement('div');
+        nameCell.className = 'param-name';
+        nameCell.textContent = key + ':';
 
-            row.appendChild(nameCell);
-            row.appendChild(input);
-            editParameters.appendChild(row);
-        }
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value;
+        input.dataset.key = key;
+
+        row.appendChild(nameCell);
+        row.appendChild(input);
+        editParameters.appendChild(row);
     });
 }
 
@@ -859,11 +912,23 @@ async function handleCivitaiHashSearch() {
         return;
     }
 
+    const cleanHash = hash.toLowerCase().replace(/\s/g, '');
+
+    if (cleanHash.length < 64) {
+        showCivitaiNotification(`Hash is too short (${cleanHash.length} chars). SHA256 requires 64 hex characters.`, 'error');
+        return;
+    }
+
+    if (!/^[a-f0-9]{64}$/.test(cleanHash)) {
+        showCivitaiNotification('Invalid hash format. Must be 64 hex characters (0-9, a-f).', 'error');
+        return;
+    }
+
     civitaiHashBtn.disabled = true;
     civitaiHashBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Searching...</span>';
 
     try {
-        const metadata = await CivitaiClient.loadCivitaiInfoByHash(hash, civitaiResults);
+        const metadata = await CivitaiClient.loadCivitaiInfoByHash(cleanHash, civitaiResults);
         if (metadata) {
             civitaiResults.classList.remove('hidden');
             showCivitaiNotification('Model found!', 'success');
