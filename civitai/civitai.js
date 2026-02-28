@@ -30,9 +30,7 @@ async function civitaiFetch(endpoint, options = {}) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text().catch(() => "");
-            console.error(`Civitai API error ${response.status}:`, errorText);
-            throw new Error(`HTTP error ${response.status}: ${errorText}`);
+            throw new Error(`HTTP error ${response.status}`);
         }
 
         return await response.json();
@@ -44,31 +42,18 @@ async function civitaiFetch(endpoint, options = {}) {
 
 async function getModelVersionByHash(hash) {
     if (!hash || typeof hash !== 'string') {
-        console.warn("Invalid hash: not a string or empty");
         return null;
     }
 
     const cleanHash = hash.toLowerCase().trim();
 
-    if (cleanHash.length < 64) {
-        console.warn(`Invalid hash: too short (${cleanHash.length} chars), SHA256 should be 64 chars`);
-        return null;
-    }
-
-    if (!/^[a-f0-9]{64}$/.test(cleanHash)) {
-        console.warn(`Invalid hash format: contains non-hex characters or wrong length`);
+    if (cleanHash.length < 8 || !/^[a-f0-9]+$/.test(cleanHash)) {
+        console.warn(`Invalid hash format: ${cleanHash}`);
         return null;
     }
 
     try {
-        const data = await civitaiFetch("/model-versions/by-hash", {
-            method: "POST",
-            body: JSON.stringify([cleanHash]),
-            headers: {
-                "Content-Type": "application/json"
-            }
-        });
-
+        const data = await civitaiFetch(`/model-versions/by-hash/${cleanHash}`);
         return data;
     } catch (error) {
         console.warn("Failed to fetch model by hash:", error);

@@ -378,18 +378,36 @@ function extractJPEGMetadata(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
-                const arrayBuffer = e.target.result;
-                const exifData = piexif.load(arrayBuffer);
+                const dataUrl = e.target.result;
+                const exifData = piexif.load(dataUrl);
                 const metadata = { parameters: [] };
 
                 if (exifData.Exif && exifData.Exif[piexif.ExifIFD.UserComment]) {
                     const userComment = exifData.Exif[piexif.ExifIFD.UserComment];
-                    const commentStr = userComment ?
-                        (typeof userComment === 'string' ? userComment : new TextDecoder('utf-8').decode(userComment)) :
-                        '';
+                    let commentStr = '';
+
+                    if (typeof userComment === 'string') {
+                        commentStr = userComment;
+                    } else if (Array.isArray(userComment)) {
+                        const bytes = new Uint8Array(userComment);
+                        commentStr = new TextDecoder('utf-8').decode(bytes);
+                    } else if (userComment instanceof Uint8Array) {
+                        commentStr = new TextDecoder('utf-8').decode(userComment);
+                    }
 
                     if (commentStr) {
-                        metadata.parameters = parseParameters(commentStr);
+                        try {
+                            const loaded = piexif.helper.UserComment.load(commentStr);
+                            commentStr = loaded;
+                        } catch (e) {
+                        }
+
+                        commentStr = commentStr.replace(/^\u0000+/, '').trim();
+
+                        const params = parseA1111Parameters(commentStr);
+                        if (params.prompt) metadata.prompt = params.prompt;
+                        if (params.negativePrompt) metadata.negativePrompt = params.negativePrompt;
+                        if (params.parameters) metadata.parameters = [params.parameters];
                     }
                 }
 
@@ -411,12 +429,45 @@ function extractJPEGMetadata(file) {
 
                 resolve(metadata);
             } catch (error) {
-                reject(error);
+                console.error('JPEG metadata extraction error:', error);
+                resolve({ parameters: [] });
             }
         };
         reader.onerror = () => reject(new Error('Error reading file'));
-        reader.readAsArrayBuffer(file);
+        reader.readAsDataURL(file);
     });
+}
+
+function parseA1111Parameters(text) {
+    if (!text || typeof text !== 'string') {
+        return { prompt: '', negativePrompt: '', parameters: '' };
+    }
+
+    let prompt = '';
+    let negativePrompt = '';
+    let parameters = '';
+
+    const negIndex = text.indexOf('Negative prompt:');
+    const stepsIndex = text.indexOf('Steps:');
+
+    if (stepsIndex !== -1) {
+        if (negIndex !== -1) {
+            prompt = text.substring(0, negIndex).trim();
+            const negStart = negIndex + 'Negative prompt:'.length;
+            negativePrompt = text.substring(negStart, stepsIndex).trim();
+            parameters = text.substring(stepsIndex).trim();
+        } else {
+            prompt = text.substring(0, stepsIndex).trim();
+            parameters = text.substring(stepsIndex).trim();
+        }
+    } else if (negIndex !== -1) {
+        prompt = text.substring(0, negIndex).trim();
+        negativePrompt = text.substring(negIndex + 'Negative prompt:'.length).trim();
+    } else {
+        prompt = text.trim();
+    }
+
+    return { prompt, negativePrompt, parameters };
 }
 
 function parseParameters(parameters) {
@@ -515,10 +566,25 @@ function displayMetadata(metadata) {
     negativePromptPre.textContent = '';
     parametersTable.innerHTML = '';
 
-    if (metadata.parameters) {
+    let hasData = false;
+
+    if (metadata.prompt) {
+        promptPre.textContent = metadata.prompt;
+        hasData = true;
+    }
+
+    if (metadata.negativePrompt) {
+        negativePromptPre.textContent = metadata.negativePrompt;
+        hasData = true;
+    }
+
+    if (metadata.parameters && metadata.parameters.length > 0) {
+        hasData = true;
         metadata.parameters.forEach(param => {
             if (param.startsWith(negativePrefix)) {
-                negativePromptPre.textContent = param.substring(negativePrefix.length);
+                if (!negativePromptPre.textContent) {
+                    negativePromptPre.textContent = param.substring(negativePrefix.length);
+                }
             } else if (param.startsWith(paramsPrefix)) {
                 displayParametersTable(param);
             } else {
@@ -527,12 +593,8 @@ function displayMetadata(metadata) {
         });
     }
 
-    if (metadata.prompt) {
-        promptPre.textContent = metadata.prompt;
-    }
-
-    if (metadata.negativePrompt) {
-        negativePromptPre.textContent = metadata.negativePrompt;
+    if (hasData) {
+        resultsDiv.classList.remove('hidden');
     }
 }
 
@@ -914,13 +976,8 @@ async function handleCivitaiHashSearch() {
 
     const cleanHash = hash.toLowerCase().replace(/\s/g, '');
 
-    if (cleanHash.length < 64) {
-        showCivitaiNotification(`Hash is too short (${cleanHash.length} chars). SHA256 requires 64 hex characters.`, 'error');
-        return;
-    }
-
-    if (!/^[a-f0-9]{64}$/.test(cleanHash)) {
-        showCivitaiNotification('Invalid hash format. Must be 64 hex characters (0-9, a-f).', 'error');
+    if (cleanHash.length < 8 || !/^[a-f0-9]+$/.test(cleanHash)) {
+        showCivitaiNotification('Invalid hash format. Must be at least 8 hex characters (0-9, a-f).', 'error');
         return;
     }
 
