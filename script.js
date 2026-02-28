@@ -448,17 +448,22 @@ function parseA1111Parameters(text) {
     let parameters = '';
 
     const negIndex = text.indexOf('Negative prompt:');
-    const stepsIndex = text.indexOf('Steps:');
+    const stepsIndex = text.indexOf(', Steps:');
+    const altStepsIndex = text.indexOf('\nSteps:');
 
-    if (stepsIndex !== -1) {
+    const actualStepsIndex = stepsIndex !== -1 ? stepsIndex : altStepsIndex;
+
+    if (actualStepsIndex !== -1) {
         if (negIndex !== -1) {
             prompt = text.substring(0, negIndex).trim();
             const negStart = negIndex + 'Negative prompt:'.length;
-            negativePrompt = text.substring(negStart, stepsIndex).trim();
-            parameters = text.substring(stepsIndex).trim();
+            negativePrompt = text.substring(negStart, actualStepsIndex).trim();
+            const paramsStart = text.indexOf(':', actualStepsIndex) + 1;
+            parameters = text.substring(paramsStart).trim();
         } else {
-            prompt = text.substring(0, stepsIndex).trim();
-            parameters = text.substring(stepsIndex).trim();
+            prompt = text.substring(0, actualStepsIndex).trim();
+            const paramsStart = text.indexOf(':', actualStepsIndex) + 1;
+            parameters = text.substring(paramsStart).trim();
         }
     } else if (negIndex !== -1) {
         prompt = text.substring(0, negIndex).trim();
